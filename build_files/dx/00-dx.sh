@@ -104,7 +104,7 @@ EXCLUDED_PACKAGES=()
 
 # Version-specific package exclusions for DX
 case "$FEDORA_MAJOR_VERSION" in
-    43)
+    43 | 44)
         EXCLUDED_PACKAGES+=(mozilla-fira-mono-fonts)
         ;;
 esac
@@ -122,6 +122,7 @@ fi
 systemctl enable docker.socket
 systemctl enable podman.socket
 systemctl enable libvirt-workaround.service
+systemctl enable incus-workaround.service
 systemctl enable bluefin-dx-groups.service
 
 sed -i 's@enabled=1@enabled=0@g' /etc/yum.repos.d/fedora-cisco-openh264.repo

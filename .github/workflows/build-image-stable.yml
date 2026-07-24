@@ -8,7 +8,6 @@ on:
     paths-ignore:
       - "**.md"
       - ".github/workflows/*validate*.yml"
-      - "system_files/shared/etc/bazaar/**"
   schedule:
     - cron: "0 1 * * TUE" # Every Tuesday at 1:00 AM UTC (same as bluefin-lts)
   workflow_call:

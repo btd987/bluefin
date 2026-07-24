@@ -7,6 +7,7 @@ version-script theming user 1 || exit 0
 set -xeuo pipefail
 
 VEN_ID="$(cat /sys/devices/virtual/dmi/id/chassis_vendor)"
+SYS_ID="$(cat /sys/devices/virtual/dmi/id/product_name)"
 
 if [[ ":Framework:" =~ :$VEN_ID: ]]; then
 	echo 'Setting Framework logo menu'
@@ -19,8 +20,6 @@ if [[ ":Framework:" =~ :$VEN_ID: ]]; then
 		dconf write /org/gnome/desktop/interface/text-scaling-factor 1.25
 	fi
 fi
-
-SYS_ID="$(cat /sys/devices/virtual/dmi/id/product_name)"
 
 if [[ ":Thelio Astra:" =~ :$SYS_ID: ]]; then
 	echo 'Setting Ampere Logo'

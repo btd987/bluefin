@@ -41,32 +41,36 @@ systemctl disable flatpak-add-fedora-repos.service
 # Disable third-party repos
 for repo in negativo17-fedora-multimedia tailscale fedora-cisco-openh264; do
     if [[ -f "/etc/yum.repos.d/${repo}.repo" ]]; then
-        sed -i 's@enabled=1@enabled=0@g' "/etc/yum.repos.d/${repo}.repo"
+        sed -Ei 's/^[[:space:]]*enabled[[:space:]]*=.*/enabled=0/' "/etc/yum.repos.d/${repo}.repo"
     fi
 done
+
+if [[ -f /etc/yum.repos.d/negativo17-fedora-multimedia.repo ]]; then
+    dnf config-manager setopt fedora-multimedia.enabled=0
+fi
 
 # Disable all COPR repos (should already be disabled by helpers, but ensure)
 for i in /etc/yum.repos.d/_copr:*.repo; do
     if [[ -f "$i" ]]; then
-        sed -i 's@enabled=1@enabled=0@g' "$i"
+        sed -Ei 's/^[[:space:]]*enabled[[:space:]]*=.*/enabled=0/' "$i"
     fi
 done
 
 # NOTE: we won't use dnf5 copr plugin for ublue-os/akmods until our upstream provides the COPR standard naming
 if [[ -f "/etc/yum.repos.d/_copr_ublue-os-akmods.repo" ]]; then
-    sed -i 's@enabled=1@enabled=0@g' /etc/yum.repos.d/_copr_ublue-os-akmods.repo
+    sed -Ei 's/^[[:space:]]*enabled[[:space:]]*=.*/enabled=0/' /etc/yum.repos.d/_copr_ublue-os-akmods.repo
 fi
 
 # Disable RPM Fusion repos
 for i in /etc/yum.repos.d/rpmfusion-*.repo; do
     if [[ -f "$i" ]]; then
-        sed -i 's@enabled=1@enabled=0@g' "$i"
+        sed -Ei 's/^[[:space:]]*enabled[[:space:]]*=.*/enabled=0/' "$i"
     fi
 done
 
 # Disable fedora-coreos-pool if it exists
 if [ -f /etc/yum.repos.d/fedora-coreos-pool.repo ]; then
-    sed -i 's@enabled=1@enabled=0@g' /etc/yum.repos.d/fedora-coreos-pool.repo
+    sed -Ei 's/^[[:space:]]*enabled[[:space:]]*=.*/enabled=0/' /etc/yum.repos.d/fedora-coreos-pool.repo
 fi
 
 echo "::endgroup::"

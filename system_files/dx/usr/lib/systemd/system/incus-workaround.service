@@ -1,5 +1,5 @@
 [Unit]
-Description=Workaround incus not having the correct label
+Description=Work around incorrect Incus SELinux labels
 ConditionFileIsExecutable=/usr/bin/incus
 ConditionFileIsExecutable=/usr/bin/incus-agent
 ConditionPathExists=/usr/lib/incus
@@ -9,8 +9,8 @@ After=local-fs.target
 Type=oneshot
 # Copy if it doesn't exist
 ExecStartPre=/usr/bin/bash -c "[ -x /usr/local/bin/overrides/incus ] || /usr/bin/cp /usr/bin/incus /usr/local/bin/overrides/incus"
-ExecStartPre=/usr/bin/bash -c "[ -x /usr/local/bin/overrides/incus-agent ] || /usr/bin/cp /usr/bin/incus /usr/local/bin/overrides/incus-agent"
-ExecStartPre=/usr/bin/bash -c "[ -d /usr/local/lib/overrides/incus ] || /usr/bin/cp -R /usr/bin/incus /usr/local/lib/overrides/incus"
+ExecStartPre=/usr/bin/bash -c "[ -x /usr/local/bin/overrides/incus-agent ] || /usr/bin/cp /usr/bin/incus-agent /usr/local/bin/overrides/incus-agent"
+ExecStartPre=/usr/bin/bash -c "[ -d /usr/local/lib/overrides/incus ] || /usr/bin/cp -R /usr/lib/incus /usr/local/lib/overrides/incus"
 # This is faster than using .mount unit. Also allows for the previous line/cleanup
 ExecStartPre=/usr/bin/mount --bind /usr/local/bin/overrides/incus /usr/bin/incus
 ExecStartPre=/usr/bin/mount --bind /usr/local/bin/overrides/incus-agent /usr/bin/incus-agent

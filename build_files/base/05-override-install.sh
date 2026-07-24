@@ -16,7 +16,10 @@ ghcurl "https://github.com/ublue-os/bluefin-docs/releases/download/0.1/bluefin.p
 install -Dm0644 -t /usr/share/doc/bluefin/ /tmp/bluefin.pdf
 
 # Starship Shell Prompt
-ghcurl "https://github.com/starship/starship/releases/latest/download/starship-x86_64-unknown-linux-gnu.tar.gz" --retry 3 -o /tmp/starship.tar.gz
+STARSHIP_VERSION="1.26.0"
+STARSHIP_SHA256="321f0dd7af8340a5f2e6a8fec6538a04f617486f9ec70d878f91c09cd8deef22"
+ghcurl "https://github.com/starship/starship/releases/download/v${STARSHIP_VERSION}/starship-x86_64-unknown-linux-gnu.tar.gz" -o /tmp/starship.tar.gz
+echo "${STARSHIP_SHA256}  /tmp/starship.tar.gz" | sha256sum -c -
 tar -xzf /tmp/starship.tar.gz -C /tmp
 install -c -m 0755 /tmp/starship /usr/bin
 

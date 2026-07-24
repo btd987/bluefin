@@ -16,7 +16,7 @@ shift
 OPTIONS=("$@")
 
 if [[ -n "$AUTH_HEADER" ]]; then
-  curl -sSL -H "$AUTH_HEADER" "${OPTIONS[@]}" "$URL"
+  curl --fail-with-body --location --silent --show-error --retry 3 --retry-all-errors -H "$AUTH_HEADER" "${OPTIONS[@]}" "$URL"
 else
-  curl -sSL "${OPTIONS[@]}" "$URL"
+  curl --fail-with-body --location --silent --show-error --retry 3 --retry-all-errors "${OPTIONS[@]}" "$URL"
 fi

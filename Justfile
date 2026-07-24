@@ -28,12 +28,13 @@ default:
 [group('Just')]
 check:
     #!/usr/bin/bash
-    find . -type f -name "*.just" | while read -r file; do
-    	echo "Checking syntax: $file"
-    	{{ just }} --unstable --fmt --check -f $file
-    done
+    set -euo pipefail
+    while IFS= read -r -d '' file; do
+    echo "Checking syntax: $file"
+    {{ just }} --unstable --fmt --check -f "$file"
+    done < <(find . -type f -name "*.just" -print0)
     echo "Checking syntax: Justfile"
-    {{ just }} --unstable --fmt --check -f Justfile
+    {{ just }} --unstable --fmt --check -f "Justfile"
 
 # Validate Shell Scripts with ShellCheck (requires: shellcheck)
 [group('Just')]
@@ -46,12 +47,13 @@ validate-scripts:
 [group('Just')]
 fix:
     #!/usr/bin/bash
-    find . -type f -name "*.just" | while read -r file; do
-    	echo "Checking syntax: $file"
-    	{{ just }} --unstable --fmt -f $file
-    done
+    set -euo pipefail
+    while IFS= read -r -d '' file; do
+    echo "Checking syntax: $file"
+    {{ just }} --unstable --fmt -f "$file"
+    done < <(find . -type f -name "*.just" -print0)
     echo "Checking syntax: Justfile"
-    {{ just }} --unstable --fmt -f Justfile || { exit 1; }
+    {{ just }} --unstable --fmt -f "Justfile"
 
 # Clean Repo
 [group('Utility')]
@@ -440,7 +442,7 @@ load-rechunk image="bluefin" tag="latest" flavor="main":
     ${PODMAN} tag ${IMAGE} localhost/"${image_name}":{{ tag }}
 
     # Cleanup
-    rm -rf "${OUT_NAME}*"
+    rm -rf -- "${OUT_NAME}"*
     rm -f previous.manifest.json
 
 # Run Container

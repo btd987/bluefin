@@ -29,11 +29,10 @@ if [[ ":Framework:" =~ :$VEN_ID: ]]; then
 	fi
 fi
 
-#shellcheck disable=SC2128
-if [[ -n "$NEEDED_KARGS" ]]; then
+if [[ ${#NEEDED_KARGS[@]} -gt 0 ]]; then
 	echo "Found needed karg changes, applying the following: ${NEEDED_KARGS[*]}"
 	plymouth display-message --text="Updating kargs - Please wait, this may take a while" || true
-	rpm-ostree kargs "${NEEDED_KARGS[*]}" --reboot || exit 1
+	rpm-ostree kargs "${NEEDED_KARGS[@]}" --reboot || exit 1
 else
 	echo "No karg changes needed"
 fi
@@ -46,7 +45,7 @@ if [[ "$VEN_ID" == "Framework" && "$SYS_ID" == "Laptop 13 ("* ]]; then
 
     # Older versions of this script applied a modprobe flag to fix 3.5 mm jack headset detection
     # which is no longer needed because the kernel applies this automatically.
-    if [[ ! -f /etc/modprobe.d/alsa.conf ]]; then
+    if [[ -f /etc/modprobe.d/alsa.conf ]]; then
         echo "Removing obsolete 3.5mm audio jack fix"
         rm -f /etc/modprobe.d/alsa.conf
     fi

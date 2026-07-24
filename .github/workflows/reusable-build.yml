@@ -4,7 +4,7 @@ on:
     inputs:
       image_flavors:
         description: "JSON string of flavors to build, '[main, nvidia]'"
-        default: "['main', 'nvidia-open']"
+        default: '["main", "nvidia-open"]'
         type: string
       brand_name:
         description: "The Brand Name: bluefin"
@@ -21,6 +21,7 @@ on:
 
 env:
   IMAGE_REGISTRY: ghcr.io/${{ github.repository_owner }}
+  PUBLISH_IMAGE: ${{ github.event_name == 'push' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref || github.run_id }}-${{ inputs.brand_name}}-${{ inputs.stream_name }}
@@ -111,7 +112,7 @@ jobs:
         id: build-image
         shell: bash
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ env.PUBLISH_IMAGE == 'true' && secrets.GITHUB_TOKEN || '' }}
         run: |
           sudo -E $(command -v just) repo_organization="${{ github.repository_owner }}" \
                     build-ghcr "${{ matrix.base_name }}" \
@@ -135,32 +136,11 @@ jobs:
           path: /var/tmp/buildah-cache-*
           key: ${{ runner.os }}-${{ runner.arch }}-buildah-${{ env.CACHE_NAME }}
 
-      - name: Setup Syft
-        id: setup-syft
-        if: github.event_name != 'pull_request'
-        uses: anchore/sbom-action/download-syft@e22c389904149dbc22b58101806040fa8d37a610 # v0
-        with:
-          syft-version: v1.39.0
-
-      - name: Generate SBOM
-        if: github.event_name != 'pull_request'
-        id: generate-sbom
-        env:
-          MATRIX_BASE_NAME: ${{ matrix.base_name }}
-          MATRIX_STREAM_NAME: ${{ matrix.stream_name }}
-          MATRIX_IMAGE_FLAVOR: ${{ matrix.image_flavor }}
-          SYFT_CMD: ${{ steps.setup-syft.outputs.cmd }}
-        run: |
-          sudo -E $(command -v just) gen-sbom "${MATRIX_BASE_NAME}" \
-                            "${MATRIX_STREAM_NAME}" \
-                            "${MATRIX_IMAGE_FLAVOR}" \
-                            "${SYFT_CMD}"
-
       - name: Rechunk Image
         id: rechunk-image
         shell: bash
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ env.PUBLISH_IMAGE == 'true' && secrets.GITHUB_TOKEN || '' }}
         run: |
           sudo -E $(command -v just) rechunk "${{ matrix.base_name }}" \
                             "${{ matrix.stream_name }}" \
@@ -174,6 +154,34 @@ jobs:
           sudo -E $(command -v just) load-rechunk "${{ matrix.base_name }}" \
                             "${{ env.DEFAULT_TAG }}" \
                             "${{ matrix.image_flavor }}"
+
+      - name: Setup Syft
+        id: setup-syft
+        if: env.PUBLISH_IMAGE == 'true'
+        uses: anchore/sbom-action/download-syft@e22c389904149dbc22b58101806040fa8d37a610 # v0
+        with:
+          syft-version: v1.39.0
+
+      - name: Generate SBOM
+        if: env.PUBLISH_IMAGE == 'true'
+        id: generate-sbom
+        env:
+          IMAGE: ${{ env.IMAGE_NAME }}
+          DEFAULT_TAG: ${{ env.DEFAULT_TAG }}
+          SYFT_CMD: ${{ steps.setup-syft.outputs.cmd }}
+          OCI_DIR: "/tmp/image-oci-dir"
+        run: |
+          mkdir -p "${OCI_DIR}/rootfs"
+          sudo podman container create --replace --name "${IMAGE}" "localhost/${IMAGE}:${DEFAULT_TAG}"
+          sudo podman export "${IMAGE}" | sudo tar -C "${OCI_DIR}/rootfs" -xf -
+          sudo podman container rm "${IMAGE}"
+
+          SBOM="$(mktemp -d)/sbom.json"
+          export SYFT_PARALLELISM=$(($(nproc) * 2))
+          sudo "${SYFT_CMD}" --source-name "${IMAGE}-${DEFAULT_TAG}" "${OCI_DIR}" -o "spdx-json=${SBOM}"
+          du -sh "${SBOM}"
+          echo "SBOM=${SBOM}" >> "$GITHUB_OUTPUT"
+          sudo rm -rf "${OCI_DIR}"
 
       - name: Secureboot Check
         id: secureboot
@@ -219,14 +227,14 @@ jobs:
           string: ${{ env.IMAGE_REGISTRY }}
 
       - name: Login to GitHub Container Registry
-        if: github.event_name != 'pull_request'
+        if: env.PUBLISH_IMAGE == 'true'
         run: |
           echo ${{ secrets.GITHUB_TOKEN }} | podman login ghcr.io -u ${{ github.actor }} --password-stdin
           echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
       - name: Push to GHCR
         id: push
-        if: github.event_name != 'pull_request'
+        if: env.PUBLISH_IMAGE == 'true'
         uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 # v4.0.0
         with:
           max_attempts: 3
@@ -250,10 +258,10 @@ jobs:
 
       - name: Install Cosign
         uses: sigstore/cosign-installer@7e8b541eb2e61bf99390e1afd4be13a184e9ebc5 # v3.10.1
-        if: github.event_name != 'pull_request'
+        if: env.PUBLISH_IMAGE == 'true'
 
       - name: Sign container image
-        if: github.event_name != 'pull_request'
+        if: env.PUBLISH_IMAGE == 'true'
         run: |
           cosign sign -y --key env://COSIGN_PRIVATE_KEY ${{ steps.registry_case.outputs.lowercase }}/${{ env.IMAGE_NAME }}@${TAGS}
         env:
@@ -262,16 +270,16 @@ jobs:
           COSIGN_PRIVATE_KEY: ${{ secrets.SIGNING_SECRET }}
 
       - name: Install ORAS
-        if: github.event_name != 'pull_request'
+        if: env.PUBLISH_IMAGE == 'true'
         uses: oras-project/setup-oras@1d808f7d7f6995cc68b7bf507bfe5c5446e1dc9d # v2.0.1
 
       - name: Login to GitHub Container Registry with ORAS
-        if: github.event_name != 'pull_request'
+        if: env.PUBLISH_IMAGE == 'true'
         run: |
           echo ${{ secrets.GITHUB_TOKEN }} | oras login ghcr.io -u ${{ github.actor }} --password-stdin
 
       - name: Upload SBOM
-        if: github.event_name != 'pull_request'
+        if: env.PUBLISH_IMAGE == 'true'
         id: upload-sbom
         env:
           IMAGE: ${{ env.IMAGE_REGISTRY }}/${{ env.IMAGE_NAME }}
@@ -292,7 +300,7 @@ jobs:
           echo "sbom_digest=${sbom_digest}" >> $GITHUB_OUTPUT
 
       - name: Sign SBOM OCI Artifact
-        if: github.event_name != 'pull_request'
+        if: env.PUBLISH_IMAGE == 'true'
         env:
           COSIGN_EXPERIMENTAL: false
           COSIGN_PRIVATE_KEY: ${{ secrets.SIGNING_SECRET }}
@@ -303,7 +311,7 @@ jobs:
           cosign sign -y --key env://COSIGN_PRIVATE_KEY ${LOWERCASE}/${IMAGE_NAME}@${SBOM_DIGEST}
 
       - name: Attestation
-        if: github.event_name != 'pull_request'
+        if: env.PUBLISH_IMAGE == 'true'
         uses: actions/attest@a1948c3f048ba23858d222213b7c278aabede763 # v4.1.1
         with:
           subject-name: ${{ env.IMAGE_REGISTRY }}/${{ env.IMAGE_NAME }}

@@ -21,6 +21,7 @@ done
 
 IMPORTANT_UNITS=(
     docker.socket
+    incus-workaround.service
     podman.socket
 )
 

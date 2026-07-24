@@ -8,8 +8,13 @@ on:
     paths-ignore:
       - ".github/workflows/*validate*.yml"
       - "**.md"
-      - "flatpaks/**"
-      - "system_files/shared/etc/bazaar/**"
+  push:
+    branches:
+      - main
+      - testing
+    paths-ignore:
+      - ".github/workflows/*validate*.yml"
+      - "**.md"
   workflow_call:
   workflow_dispatch:
 

@@ -113,4 +113,7 @@ if [[ ${AKMODS_FLAVOR} =~ coreos ]]; then
     echo "zfs" >/usr/lib/modules-load.d/zfs.conf
 fi
 
+# Do not allow the akmods COPR to affect subsequent package transactions.
+sed -i 's@enabled=1@enabled=0@g' /etc/yum.repos.d/_copr_ublue-os-akmods.repo
+
 echo "::endgroup::"

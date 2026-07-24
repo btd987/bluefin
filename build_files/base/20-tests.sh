@@ -4,6 +4,9 @@ echo "::group:: ===$(basename "$0")==="
 
 set -eoux pipefail
 
+test "$(stat -c %a /tmp)" = "1777"
+test -s "/usr/lib/modules/${KERNEL}/initramfs.img"
+
 # We need to have the ublue-os signing keys on the image!
 # Published images without these keys won't be able to pull ghcr.io/ublue-os/*
 # and can therefore not update!

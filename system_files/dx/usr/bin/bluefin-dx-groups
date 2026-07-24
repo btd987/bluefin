@@ -1,15 +1,16 @@
 #!/usr/bin/env bash
 
+set -euo pipefail
+
 # SCRIPT VERSION
 GROUP_SETUP_VER=1
 GROUP_SETUP_VER_FILE="/etc/ublue/dx-groups"
-GROUP_SETUP_VER_RAN=$(cat "$GROUP_SETUP_VER_FILE")
 
 # make the directory if it doesn't exist
 mkdir -p /etc/ublue
 
 # Run script if updated
-if [[ -f $GROUP_SETUP_VER_FILE && "$GROUP_SETUP_VER" = "$GROUP_SETUP_VER_RAN" ]]; then
+if [[ -f $GROUP_SETUP_VER_FILE && "$GROUP_SETUP_VER" = "$(cat "$GROUP_SETUP_VER_FILE")" ]]; then
   echo "Group setup has already run. Exiting..."
   exit 0
 fi
@@ -28,11 +29,13 @@ append_group docker
 append_group incus-admin
 append_group libvirt
 
-wheelarray=($(getent group wheel | cut -d ":" -f 4 | tr ',' '\n'))
-for user in $wheelarray; do
-  usermod -aG docker $user
-  usermod -aG incus-admin $user
-  usermod -aG libvirt $user
+wheel_group="$(getent group wheel)"
+IFS=',' read -r -a wheel_users <<< "${wheel_group##*:}"
+for user in "${wheel_users[@]}"; do
+  [[ -z "$user" ]] && continue
+  usermod -aG docker "$user"
+  usermod -aG incus-admin "$user"
+  usermod -aG libvirt "$user"
 done
 
 # Prevent future executions
